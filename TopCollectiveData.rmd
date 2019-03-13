@@ -1,0 +1,42 @@
+```{r}
+library(ggplot2)
+library(dplyr)
+library(psych)
+```
+
+```{r}
+df <- read.csv("TopCollectivesByDonations.csv")
+```
+
+```{r}
+head(df)
+```
+
+```{r}
+summary(df)
+```
+
+```{r Filter for data that only has a Twitter Acount}
+df %>%
+  filter(twitter != "") %>%
+  summary()
+```
+
+Roughly 15 open source accounts lack Twitter accounts out of the 50 listed, so thats a thing. Also the distirbution of total amount of donations is slightly increased when all the accounts that lack twitter acounts get removed. 
+
+```{r Plotting out funding as a histogram}
+ggplot(df, aes(totalAmount)) + geom_histogram(colour="black", fill= "#f0db4f") +
+  geom_vline(aes(xintercept=mean(totalAmount)), colour="black", linetype="dashed", size=1) +
+  geom_vline(aes(xintercept=median(totalAmount)), colour='red', linetype="dashed", size=1) +
+  theme_bw() +
+  ggtitle("Distribution of Open Source Funding for Top Projects") +
+  ylab("Total Amount") +
+  xlab("Count") +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+  
+```
+
+```{r}
+describe(df$totalAmount)
+```

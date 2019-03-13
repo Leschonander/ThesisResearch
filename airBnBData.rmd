@@ -1,0 +1,26 @@
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+
+```{r}
+df <- read.csv("AirBnBData.csv")
+```
+
+```{r}
+summary(df)
+```
+
+```{r}
+ggplot(df, aes(Amount)) + geom_histogram(colour="black", fill= "#ff5a5f") +
+  geom_vline(aes(xintercept=mean(Amount)), colour="black", linetype="dashed", size=1) +
+  geom_vline(aes(xintercept=median(Amount)), colour='red', linetype="dashed", size=1) +
+  theme_bw() +
+  ggtitle("Distribution of AirBnB's Funding for Open Source on Open Collective") +
+  ylab("Count") +
+  xlab("Amount") +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+```
+
+
