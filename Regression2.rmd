@@ -1,0 +1,225 @@
+```{r}
+library(tidyverse)
+library(lubridate)
+library(broom)
+
+library(rsample)
+library(caret)
+library(yardstick)
+
+library(extrafont)
+library(stargazer)
+
+theme_my_axios <- function(...) {
+    theme_minimal() +
+    theme(
+      text = element_text(family = "Roboto Mono"),
+      panel.grid.major.x = element_blank() ,
+      panel.grid.major.y = element_line(),  # (size=.1, color="grey" )
+      plot.title = element_text(color = "#333333"),
+      plot.subtitle =  element_text(color = "#737373"),
+      plot.caption = element_text(color = "#737373"),
+      axis.title.x = element_text(color = "#737373"),
+      axis.title.y = element_text(color = "#737373"),
+      axis.text = element_text(color = "#737373"),
+      legend.text = element_text(color = "#737373")
+      #legend.position="none"
+      )  
+}
+
+save_chart <- function(name, graphic){
+  ggsave(gsub(" ", '', paste(getwd(), "/", name ,".svg")), graphic, height = 7, width = 10)
+}
+
+save_chart_png <- function(name, graphic){
+  ggsave(gsub(" ", '', paste(getwd(), "/", name ,".png")), graphic, height = 7, width = 10)
+}
+
+options(scipen=10000)
+
+setwd(getwd())
+```
+
+```{r}
+data <- readxl::read_xlsx("NewData.xlsx")
+```
+
+# Exploratory Data Analysis
+
+```{r}
+data %>%
+  summary()
+```
+
+```{r}
+(data %>%
+  ggplot(aes(Stars)) + geom_histogram() + theme_my_axios() + labs(
+    y = "Count",
+    title = "Figure 1: Histogram of Stars"
+  ) -> star_hist)
+save_chart_png("StarHist", star_hist)
+```
+
+
+```{r}
+(data %>%
+  ggplot(aes(Commits)) + geom_histogram() + theme_my_axios() + labs(
+    y = "Count",
+    title = "Figure 2: Histogram of Commits"
+  ) -> commit_hist)
+
+save_chart_png("CommitHist", commit_hist)
+```
+
+
+```{r}
+(data %>%
+  ggplot(aes(Contributers)) + geom_histogram() + theme_my_axios() + labs(
+    y = "Count",
+    title = "Figure 3: Histogram of Contributers"
+  ) -> contrib_hist)
+save_chart_png("ContribHist", contrib_hist)
+```
+
+
+```{r}
+stargazer(psych::describe(data),  type="html", out = "Summary2.html", title = "Summary Table B")
+```
+
+```{r}
+stargazer(data.frame(data),  type="html", out = "Summary.html", title = "Table 1: Summary Table")
+```
+
+```{r}
+median(data$Stars)
+median(data$Contributers)
+median(data$Commits)
+```
+
+
+```{r}
+data %>%
+  group_by(Corporate) %>%
+  count()
+```
+
+```{r}
+data %>%
+  group_by(Corporate) %>%
+  summarise(
+    `Mean Star Count` = mean(Stars),
+    `Min Star Count` = min(Stars),
+    `Max Star Count` = max(Stars),
+    `Standard Deviation (Stars)` = sd(Stars),
+    `Count` = n()
+  ) %>%
+  stargazer(data.frame(.),  type="html", out = "CorporateGroup.html", summary=FALSE, title = "Table 2: Corporate Variable Analysis")
+```
+
+```{r}
+data %>%
+  group_by(Category) %>%
+  summarise(
+    `Mean Star Count` = mean(Stars),
+    `Median Star Count` = median(Stars),
+    `Min Star Count` = min(Stars),
+    `Max Star Count` = max(Stars),
+    `Standard Deviation` = sd(Stars),
+    `Count` = n()
+  ) %>%
+  stargazer(data.frame(.),  type="html", out = "CategoryGroup.html", summary=FALSE, title = "Table 3: Category Variable Analysis")
+
+```
+
+```{r}
+data %>%
+  mutate(Corporate = as_factor(Corporate)) %>%
+    ggplot(aes(Contributers, Stars)) + 
+    geom_point() + 
+    theme_my_axios() +
+    labs(title = "Scatterplot of Contributers and Stars")
+
+ # geom_smooth(method = "lm", fill = NA) +
+```
+
+```{r}
+data %>%
+  mutate(Corporate = as_factor(Corporate)) %>%
+    ggplot(aes(Commits, Stars, color = Corporate)) + 
+    geom_point() + 
+    theme_my_axios()
+```
+
+```{r}
+data %>%
+  mutate(Corporate = as_factor(Corporate)) %>%
+  aov(Stars ~ Corporate, .) %>%
+  summary()
+```
+
+
+# Regression Analysis
+## Baseline Regression
+
+```{r}
+data %>%
+  mutate(Corporate = as_factor(Corporate)) %>%
+  lm(Stars ~ Commits + Contributers + Corporate + Category, .) %>%
+  summary()
+```
+
+R^2 of .2736, explains over 25% of the variance in the dataset...
+Commits and Contributers are nearly significant and significant respectivly. 
+Neither as a facor (Yes or No) are significant.
+
+```{r}
+data %>%
+  mutate(Corporate = as_factor(Corporate)) %>%
+  lm(Stars ~ Commits + Contributers + Corporate + Category, .) -> Model
+
+stargazer(Model, type="html", title="Table 4: Model Results", out = "Regression.html")
+
+```
+
+
+```{r}
+data %>%
+  lm(Stars ~ Contributers, .) -> ModelB
+
+stargazer(ModelB, type="html", title="Regression with only Contributers",  out = "RegB.html")
+```
+
+
+```{r}
+data %>%
+  lm(Stars ~ Commits + Contributers + Corporate + Category, .) -> base_model
+
+data %>%
+  mutate(
+    Estimate = predict(base_model, .)
+  ) %>%
+  ggplot(aes(Stars, Estimate)) + 
+    geom_point(size = 1.5, alpha = 0.75) +
+    geom_abline(lty = 2, color = "gray50") +
+      geom_smooth(method = "lm") + theme_my_axios() + labs(
+        title = "Figure 4: Regresion vs Full Correlation"
+      )
+```
+
+----
+Just Corprate
+
+```{r}
+data %>%
+  lm(Stars ~ Corporate, .) %>%
+  summary()
+```
+
+Just Commits
+
+```{r}
+data %>%
+  lm(Stars ~ Contributers, .) %>%
+  summary()
+```
+
